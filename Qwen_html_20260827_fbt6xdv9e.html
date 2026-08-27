@@ -1,0 +1,1594 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Correcciones Diferenciales GNSS - Guía Completa Interactiva</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/contrib/auto-render.min.js"
+    onload="renderMathInElement(document.body);"></script>
+
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+        font-family: 'Segoe UI', Tahoma, sans-serif;
+        background: linear-gradient(135deg, #0a1929 0%, #1e3a5f 100%);
+        color: #e0e0e0;
+        line-height: 1.7;
+    }
+    header {
+        background: linear-gradient(135deg, #0b3d91, #1e88e5);
+        color: white;
+        padding: 40px 20px;
+        text-align: center;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    }
+    header h1 { font-size: 2.5em; margin-bottom: 10px; }
+    header p { font-size: 1.2em; opacity: 0.9; }
+    .container { max-width: 1300px; margin: 0 auto; padding: 30px 20px; }
+    section {
+        background: rgba(255,255,255,0.05);
+        backdrop-filter: blur(10px);
+        border-radius: 15px;
+        padding: 30px;
+        margin-bottom: 30px;
+        border: 1px solid rgba(255,255,255,0.1);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    }
+    h2 {
+        color: #4fc3f7;
+        border-bottom: 2px solid #4fc3f7;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+        font-size: 1.8em;
+    }
+    h3 { color: #81d4fa; margin: 15px 0 10px; }
+    h4 { color: #b3e5fc; margin: 10px 0 8px; }
+    p { margin-bottom: 15px; }
+    .formula {
+        background: rgba(0,0,0,0.4);
+        padding: 20px;
+        border-radius: 8px;
+        margin: 15px 0;
+        text-align: center;
+        border-left: 4px solid #4fc3f7;
+        font-size: 1.1em;
+    }
+    .formula-explanation {
+        background: rgba(79,195,247,0.1);
+        padding: 15px;
+        border-radius: 8px;
+        margin: 10px 0;
+        border-left: 4px solid #81d4fa;
+        font-size: 0.95em;
+    }
+    
+    /* ESCENA 3D */
+    #scene3d-container {
+        width: 100%;
+        height: 600px;
+        border-radius: 10px;
+        background: linear-gradient(to bottom, #000428 0%, #004e92 50%, #87CEEB 100%);
+        margin: 20px 0;
+        position: relative;
+        overflow: hidden;
+        border: 2px solid #4fc3f7;
+    }
+    #scene3d {
+        width: 100%;
+        height: 100%;
+    }
+    .scene-info-panel {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        background: rgba(0,0,0,0.8);
+        padding: 15px;
+        border-radius: 8px;
+        font-size: 0.85em;
+        z-index: 10;
+        max-width: 280px;
+        border: 1px solid #4fc3f7;
+    }
+    .scene-info-panel h4 {
+        color: #4fc3f7;
+        margin-bottom: 8px;
+    }
+    .scene-info-panel .stat {
+        margin: 5px 0;
+        display: flex;
+        justify-content: space-between;
+    }
+    .scene-info-panel .stat-value {
+        color: #4caf50;
+        font-weight: bold;
+    }
+    .scene-legend {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: rgba(0,0,0,0.8);
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 0.85em;
+        z-index: 10;
+        border: 1px solid #4fc3f7;
+    }
+    .scene-legend div {
+        margin: 5px 0;
+        display: flex;
+        align-items: center;
+    }
+    .legend-color {
+        width: 20px;
+        height: 10px;
+        margin-right: 8px;
+        border-radius: 2px;
+    }
+    .controls-3d {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 15px;
+        margin-bottom: 15px;
+    }
+    .controls-3d button {
+        background: #1e88e5;
+        color: white;
+        border: none;
+        padding: 10px 18px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.3s;
+        font-weight: bold;
+    }
+    .controls-3d button:hover { background: #1565c0; transform: translateY(-2px); }
+    .controls-3d button.active { background: #4caf50; box-shadow: 0 0 10px #4caf50; }
+    .slider-container {
+        background: rgba(0,0,0,0.4);
+        padding: 15px 20px;
+        border-radius: 10px;
+        margin: 10px 0;
+        border: 1px solid rgba(79,195,247,0.3);
+    }
+    .slider-container label {
+        display: block;
+        margin-bottom: 10px;
+        font-weight: bold;
+        color: #81d4fa;
+        font-size: 1.05em;
+    }
+    input[type="range"] {
+        width: 100%;
+        height: 8px;
+        border-radius: 5px;
+        background: #2c3e50;
+        outline: none;
+        -webkit-appearance: none;
+    }
+    input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 22px;
+        height: 22px;
+        border-radius: 50%;
+        background: #4fc3f7;
+        cursor: pointer;
+        box-shadow: 0 0 5px rgba(79,195,247,0.5);
+    }
+    .slider-value {
+        display: inline-block;
+        background: #4fc3f7;
+        color: #000;
+        padding: 3px 12px;
+        border-radius: 5px;
+        font-weight: bold;
+        margin-left: 10px;
+    }
+    #d3-chart {
+        width: 100%;
+        height: 400px;
+        background: rgba(0,0,0,0.3);
+        border-radius: 10px;
+    }
+    .cards-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+    }
+    .card {
+        background: rgba(255,255,255,0.08);
+        padding: 20px;
+        border-radius: 10px;
+        border-top: 4px solid #4fc3f7;
+        transition: transform 0.3s;
+        cursor: pointer;
+    }
+    .card:hover { transform: translateY(-5px); background: rgba(255,255,255,0.12); }
+    .card h3 { color: #4fc3f7; margin-bottom: 10px; }
+    .card .precision {
+        display: inline-block;
+        background: #4caf50;
+        color: white;
+        padding: 5px 12px;
+        border-radius: 15px;
+        font-size: 0.9em;
+        margin-top: 10px;
+    }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 20px 0;
+        background: rgba(0,0,0,0.2);
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    th {
+        background: #1e88e5;
+        color: white;
+        padding: 12px;
+        text-align: left;
+    }
+    td {
+        padding: 12px;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+    }
+    tr:hover { background: rgba(255,255,255,0.05); }
+    .quiz-question {
+        background: rgba(0,0,0,0.3);
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 15px;
+    }
+    .quiz-options button {
+        display: block;
+        width: 100%;
+        padding: 12px;
+        margin: 8px 0;
+        background: rgba(255,255,255,0.1);
+        color: white;
+        border: 2px solid rgba(255,255,255,0.2);
+        border-radius: 8px;
+        cursor: pointer;
+        text-align: left;
+        transition: all 0.3s;
+    }
+    .quiz-options button:hover { background: rgba(30,136,229,0.3); border-color: #4fc3f7; }
+    .quiz-options button.correct { background: #4caf50; border-color: #4caf50; }
+    .quiz-options button.wrong { background: #f44336; border-color: #f44336; }
+    .feedback {
+        margin-top: 10px;
+        padding: 10px;
+        border-radius: 5px;
+        font-weight: bold;
+    }
+    .feedback.ok { background: rgba(76,175,80,0.2); color: #81c784; }
+    .feedback.err { background: rgba(244,67,54,0.2); color: #ef9a9a; }
+    .chart-container {
+        background: rgba(0,0,0,0.2);
+        padding: 20px;
+        border-radius: 10px;
+        margin: 20px 0;
+    }
+    .info-box {
+        background: rgba(79,195,247,0.1);
+        border-left: 4px solid #4fc3f7;
+        padding: 15px;
+        margin: 15px 0;
+        border-radius: 5px;
+    }
+    .warning-box {
+        background: rgba(255,152,0,0.1);
+        border-left: 4px solid #ff9800;
+        padding: 15px;
+        margin: 15px 0;
+        border-radius: 5px;
+    }
+    .calculator {
+        background: rgba(0,0,0,0.4);
+        padding: 25px;
+        border-radius: 10px;
+        margin: 20px 0;
+        border: 2px solid #4fc3f7;
+    }
+    .calculator h3 {
+        color: #4fc3f7;
+        margin-bottom: 15px;
+    }
+    .calc-input-group {
+        margin: 15px 0;
+    }
+    .calc-input-group label {
+        display: block;
+        margin-bottom: 5px;
+        color: #81d4fa;
+    }
+    .calc-input-group input {
+        width: 100%;
+        padding: 10px;
+        border: 2px solid #4fc3f7;
+        border-radius: 5px;
+        background: rgba(0,0,0,0.3);
+        color: white;
+        font-size: 16px;
+    }
+    .calc-result {
+        background: rgba(76,175,80,0.2);
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 15px;
+        border-left: 4px solid #4caf50;
+        font-size: 1.1em;
+    }
+    .calc-button {
+        background: #4caf50;
+        color: white;
+        border: none;
+        padding: 12px 30px;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        margin-top: 10px;
+        transition: all 0.3s;
+    }
+    .calc-button:hover { background: #45a049; transform: translateY(-2px); }
+    .flip-card {
+        perspective: 1000px;
+        height: 200px;
+        cursor: pointer;
+    }
+    .flip-card-inner {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        transition: transform 0.6s;
+        transform-style: preserve-3d;
+    }
+    .flip-card.flipped .flip-card-inner {
+        transform: rotateY(180deg);
+    }
+    .flip-card-front, .flip-card-back {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        backface-visibility: hidden;
+        border-radius: 10px;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+    }
+    .flip-card-front {
+        background: linear-gradient(135deg, #1e88e5, #0d47a1);
+        color: white;
+    }
+    .flip-card-back {
+        background: linear-gradient(135deg, #4caf50, #1b5e20);
+        color: white;
+        transform: rotateY(180deg);
+    }
+    .accordion {
+        margin: 15px 0;
+    }
+    .accordion-item {
+        background: rgba(0,0,0,0.3);
+        margin-bottom: 10px;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    .accordion-header {
+        padding: 15px;
+        background: rgba(30,136,229,0.3);
+        cursor: pointer;
+        font-weight: bold;
+        color: #4fc3f7;
+        transition: background 0.3s;
+    }
+    .accordion-header:hover { background: rgba(30,136,229,0.5); }
+    .accordion-content {
+        padding: 0 15px;
+        max-height: 0;
+        overflow: hidden;
+        transition: max-height 0.3s ease, padding 0.3s ease;
+    }
+    .accordion-content.active {
+        padding: 15px;
+        max-height: 1000px;
+    }
+    .mode-description {
+        background: rgba(0,0,0,0.5);
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 15px;
+        border-left: 4px solid #ff9800;
+        min-height: 60px;
+    }
+    footer {
+        text-align: center;
+        padding: 30px;
+        background: rgba(0,0,0,0.5);
+        color: #90a4ae;
+    }
+</style>
+</head>
+<body>
+
+<header>
+    <h1>🛰️ Correcciones Diferenciales GNSS</h1>
+    <p>Guía Completa e Interactiva para Agricultura de Precisión</p>
+</header>
+
+<div class="container">
+
+    <!-- SECCIÓN 1: INTRODUCCIÓN -->
+    <section>
+        <h2>1. Fundamentos Teóricos</h2>
+        <p>Los receptores GNSS tienen errores inherentes (3-10 m en modo autónomo). Las <strong>correcciones diferenciales</strong> eliminan estos errores comparando las mediciones de un receptor móvil (rover) con una <strong>estación base</strong> de coordenadas conocidas.</p>
+        
+        <div class="formula">
+            $$P = \rho + c(dt_r - dt_s) + I + T + \varepsilon_{mp} + \varepsilon_n$$
+        </div>
+        
+        <div class="formula-explanation">
+            <strong>Donde:</strong> \(P\)=pseudodistancia, \(\rho\)=distancia geométrica, \(c\)=velocidad de la luz, \(dt_r\)=error reloj receptor, \(dt_s\)=error reloj satélite, \(I\)=ionosfera, \(T\)=troposfera, \(\varepsilon_{mp}\)=multicamino, \(\varepsilon_n\)=ruido
+        </div>
+
+        <h3>Fuentes de error</h3>
+        <div class="accordion">
+            <div class="accordion-item">
+                <div class="accordion-header" onclick="toggleAccordion(this)">🌌 Error Ionosférico - Hasta 10-30 m</div>
+                <div class="accordion-content">
+                    <div class="formula">$$I = \frac{40.3 \cdot TEC}{f^2}$$</div>
+                    <p>Se elimina casi completamente si base-rover < 20 km.</p>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <div class="accordion-header" onclick="toggleAccordion(this)">☁️ Error Troposférico - Hasta 2-3 m</div>
+                <div class="accordion-content">
+                    <p>Depende de temperatura, presión y humedad. Se elimina si base-rover < 15 km.</p>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <div class="accordion-header" onclick="toggleAccordion(this)">⏰ Error de Reloj Satelital - Hasta 1.5 m</div>
+                <div class="accordion-content">
+                    <p>Se elimina completamente con corrección diferencial (error común a ambos receptores).</p>
+                </div>
+            </div>
+            <div class="accordion-item">
+                <div class="accordion-header" onclick="toggleAccordion(this)">🔄 Multicamino - Hasta 1-5 m (NO SE CORRIGE)</div>
+                <div class="accordion-content">
+                    <p>Específico del entorno de cada receptor. No se elimina diferencialmente.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECCIÓN 2: VISUALIZACIÓN 3D CON CAMPO DE CULTIVO -->
+    <section>
+        <h2>2. Simulación 3D - Campo de Cultivo con GNSS</h2>
+        <p>Visualiza cómo los satélites GNSS y la estación base corrigen la posición de un tractor en un campo de cultivo. Ajusta la cantidad de satélites y observa cómo cambia la precisión.</p>
+        
+        <div id="scene3d-container">
+            <div id="scene3d"></div>
+            
+            <div class="scene-info-panel">
+                <h4>📊 Estado del Sistema</h4>
+                <div class="stat"><span>Satélites visibles:</span> <span class="stat-value" id="info-sats">6</span></div>
+                <div class="stat"><span>PDOP:</span> <span class="stat-value" id="info-pdop">2.1</span></div>
+                <div class="stat"><span>Modo:</span> <span class="stat-value" id="info-mode">RTK</span></div>
+                <div class="stat"><span>Precisión:</span> <span class="stat-value" id="info-precision">±2 cm</span></div>
+                <div class="stat"><span>Distancia base-rover:</span> <span class="stat-value" id="info-dist">500 m</span></div>
+            </div>
+            
+            <div class="scene-legend">
+                <div><div class="legend-color" style="background:#4caf50;"></div>Campo de cultivo</div>
+                <div><div class="legend-color" style="background:#ffeb3b;"></div>Surcos</div>
+                <div><div class="legend-color" style="background:#ffc107;"></div>Satélites GNSS</div>
+                <div><div class="legend-color" style="background:#f44336;"></div>Estación Base</div>
+                <div><div class="legend-color" style="background:#00bcd4;"></div>Tractor (Rover)</div>
+                <div><div class="legend-color" style="background:#e91e63;"></div>Satélite SBAS</div>
+                <div><div class="legend-color" style="background:#ffff00;"></div>Señales satelitales</div>
+                <div><div class="legend-color" style="background:#ff00ff;"></div>Correcciones</div>
+            </div>
+        </div>
+        
+        <!-- Controles interactivos -->
+        <div class="slider-container">
+            <label>🛰️ Cantidad de satélites GNSS: <span class="slider-value" id="num-sats-val">6</span></label>
+            <input type="range" id="num-satellites" min="1" max="12" value="6" step="1">
+        </div>
+
+        <div class="slider-container">
+            <label>📏 Distancia base-rover (m): <span class="slider-value" id="dist-br-val">500</span></label>
+            <input type="range" id="dist-base-rover" min="100" max="5000" value="500" step="100">
+        </div>
+
+        <div class="slider-container">
+            <label>⚡ Velocidad de simulación: <span class="slider-value" id="speed-val">1x</span></label>
+            <input type="range" id="sim-speed" min="0" max="5" value="1" step="0.5">
+        </div>
+
+        <div class="controls-3d">
+            <button id="btn-rtk" class="active">📡 RTK</button>
+            <button id="btn-sbas">🛰️ SBAS</button>
+            <button id="btn-ppp">🌐 PPP</button>
+            <button id="btn-dgps">📻 DGPS</button>
+            <button id="btn-rotate">🔄 Auto-rotar</button>
+            <button id="btn-reset">🎯 Reset cámara</button>
+            <button id="btn-toggle-sbas">️ Mostrar SBAS</button>
+        </div>
+
+        <div class="mode-description" id="mode-description">
+            <strong> Modo RTK:</strong> La estación base (roja) envía correcciones en tiempo real al tractor (cian) vía radio o NTRIP. Los satélites GNSS (amarillos) transmiten señales a ambos receptores. Precisión: ±1-3 cm.
+        </div>
+
+        <div class="info-box">
+            <strong>🎮 Controles:</strong><br>
+            • <strong>Arrastra</strong> con el ratón para rotar la vista<br>
+            • <strong>Rueda del ratón</strong> para hacer zoom<br>
+            • <strong>Shift + arrastrar</strong> para mover la cámara<br>
+            • Ajusta los deslizadores para cambiar parámetros en tiempo real
+        </div>
+    </section>
+
+    <!-- SECCIÓN 3: TEORÍA MATEMÁTICA -->
+    <section>
+        <h2>3. Teoría Matemática de las Correcciones</h2>
+        
+        <h3>3.1 Diferencia simple (Single Difference)</h3>
+        <div class="formula">
+            $$\Delta P_{AB}^i = P_A^i - P_B^i = \Delta\rho_{AB}^i + c \cdot dt_{AB} + \Delta I_{AB}^i + \varepsilon$$
+        </div>
+        <p>Elimina el error de reloj del satélite.</p>
+
+        <h3>3.2 Doble diferencia (Double Difference)</h3>
+        <div class="formula">
+            $$\nabla\Delta P_{AB}^{ij} = \Delta P_{AB}^i - \Delta P_{AB}^j = \nabla\Delta\rho_{AB}^{ij} + \nabla\Delta I_{AB}^{ij} + \varepsilon$$
+        </div>
+        <p>Elimina también el error de reloj entre receptores. Es la base del RTK.</p>
+
+        <h3>3.3 Fase de portadora y ambigüedad</h3>
+        <div class="formula">
+            $$\Phi = \rho + c(dt_r - dt_s) - I + T + \lambda N + \varepsilon$$
+        </div>
+        <p>Donde \(\lambda\) es la longitud de onda (19 cm para L1) y \(N\) es la ambigüedad entera a resolver.</p>
+
+        <h3>3.4 Algoritmo LAMBDA para resolver ambigüedades</h3>
+        <div class="formula">
+            $$\min_{N \in \mathbb{Z}^n} \left( \hat{N} - N \right)^T Q_{\hat{N}}^{-1} \left( \hat{N} - N \right)$$
+        </div>
+
+        <h3>3.5 Modelo de precisión vs distancia</h3>
+        <div class="formula">
+            $$\sigma = \sigma_0 + k \cdot d$$
+        </div>
+        <div class="formula-explanation">
+            \(\sigma_0\) = precisión base (8-10 mm), \(k\) = coeficiente ppm (1 mm/km), \(d\) = distancia (km)
+        </div>
+    </section>
+
+    <!-- SECCIÓN 4: CALCULADORAS -->
+    <section>
+        <h2>4. Calculadoras Interactivas</h2>
+        
+        <div class="calculator">
+            <h3>🧮 Calculadora de Precisión RTK/PPK</h3>
+            <div class="calc-input-group">
+                <label>Distancia a la base (km):</label>
+                <input type="number" id="calc-distancia" value="10" min="0" max="100" step="0.5">
+            </div>
+            <div class="calc-input-group">
+                <label>Precisión base del receptor (mm):</label>
+                <input type="number" id="calc-precision-base" value="10" min="5" max="20" step="1">
+            </div>
+            <div class="calc-input-group">
+                <label>Coeficiente de degradación (ppm):</label>
+                <input type="number" id="calc-ppm" value="1" min="0.5" max="3" step="0.1">
+            </div>
+            <button class="calc-button" onclick="calcularPrecision()">Calcular Precisión</button>
+            <div class="calc-result" id="calc-resultado-precision" style="display:none;"></div>
+        </div>
+
+        <div class="calculator">
+            <h3>📏 Calculadora de Distancia Máxima</h3>
+            <div class="calc-input-group">
+                <label>Precisión deseada (cm):</label>
+                <input type="number" id="calc-precision-deseada" value="3" min="1" max="50" step="0.5">
+            </div>
+            <div class="calc-input-group">
+                <label>Precisión base del receptor (mm):</label>
+                <input type="number" id="calc-precision-base2" value="10" min="5" max="20" step="1">
+            </div>
+            <div class="calc-input-group">
+                <label>Coeficiente de degradación (ppm):</label>
+                <input type="number" id="calc-ppm2" value="1" min="0.5" max="3" step="0.1">
+            </div>
+            <button class="calc-button" onclick="calcularDistanciaMaxima()">Calcular Distancia Máxima</button>
+            <div class="calc-result" id="calc-resultado-distancia" style="display:none;"></div>
+        </div>
+    </section>
+
+    <!-- SECCIÓN 5: SIMULADOR D3.JS -->
+    <section>
+        <h2>5. Simulador de Degradación de Precisión</h2>
+        <div class="slider-container">
+            <label>📏 Distancia a la base (km): <span class="slider-value" id="dist-val">5</span></label>
+            <input type="range" id="distancia" min="0" max="50" value="5" step="1">
+        </div>
+        <div class="slider-container">
+            <label>📶 Calidad de la señal (1-10): <span class="slider-value" id="senal-val">8</span></label>
+            <input type="range" id="senal" min="1" max="10" value="8" step="1">
+        </div>
+        <div class="slider-container">
+            <label>🌡️ Condiciones atmosféricas (1-10): <span class="slider-value" id="atm-val">7</span></label>
+            <input type="range" id="atm" min="1" max="10" value="7" step="1">
+        </div>
+        <div id="d3-chart"></div>
+    </section>
+
+    <!-- SECCIÓN 6: TARJETAS INTERACTIVAS -->
+    <section>
+        <h2>6. Conceptos Clave - Tarjetas Interactivas</h2>
+        <p>Haz clic en cada tarjeta para ver la explicación.</p>
+        <div class="cards-grid">
+            <div class="flip-card" onclick="this.classList.toggle('flipped')">
+                <div class="flip-card-inner">
+                    <div class="flip-card-front">
+                        <h3>🎯 FIX vs FLOAT</h3>
+                        <p>¿Qué significan estos estados en RTK?</p>
+                    </div>
+                    <div class="flip-card-back">
+                        <p><strong>FIX:</strong> Ambigüedades resueltas como enteros. Precisión 1-3 cm.</p>
+                        <p><strong>FLOAT:</strong> Ambigüedades como reales. Precisión 30-50 cm.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flip-card" onclick="this.classList.toggle('flipped')">
+                <div class="flip-card-inner">
+                    <div class="flip-card-front">
+                        <h3>📡 NTRIP</h3>
+                        <p>¿Qué es y cómo funciona?</p>
+                    </div>
+                    <div class="flip-card-back">
+                        <p><strong>Networked Transport of RTCM via Internet Protocol</strong></p>
+                        <p>Permite recibir correcciones RTK vía internet desde redes CORS.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flip-card" onclick="this.classList.toggle('flipped')">
+                <div class="flip-card-inner">
+                    <div class="flip-card-front">
+                        <h3>🌐 CORS</h3>
+                        <p>¿Qué son las redes CORS?</p>
+                    </div>
+                    <div class="flip-card-back">
+                        <p><strong>Continuously Operating Reference Stations</strong></p>
+                        <p>Redes de estaciones base permanentes que difunden correcciones 24/7.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flip-card" onclick="this.classList.toggle('flipped')">
+                <div class="flip-card-inner">
+                    <div class="flip-card-front">
+                        <h3>📊 PDOP</h3>
+                        <p>¿Qué es el DOP?</p>
+                    </div>
+                    <div class="flip-card-back">
+                        <p><strong>Position Dilution of Precision</strong></p>
+                        <p>Mide la geometría de los satélites. PDOP < 3 = excelente, > 6 = pobre.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECCIÓN 7: MÉTODOS -->
+    <section>
+        <h2>7. Métodos de Corrección Diferencial</h2>
+        <div class="cards-grid">
+            <div class="card">
+                <h3> DGPS</h3>
+                <p>Corrección basada en pseudocódigos C/A.</p>
+                <span class="precision">±0.5 - 1 m</span>
+            </div>
+            <div class="card">
+                <h3>🛰️ SBAS</h3>
+                <p>Satélites geoestacionarios (WAAS, EGNOS).</p>
+                <span class="precision">±1 - 2 m</span>
+            </div>
+            <div class="card">
+                <h3>🎯 RTK</h3>
+                <p>Fase de portadora en tiempo real.</p>
+                <span class="precision">±1 - 3 cm</span>
+            </div>
+            <div class="card">
+                <h3>📊 PPK</h3>
+                <p>Post-procesado cinemático.</p>
+                <span class="precision">±1 - 3 cm</span>
+            </div>
+            <div class="card">
+                <h3>🌐 PPP</h3>
+                <p>Preciso puntual con órbitas IGS.</p>
+                <span class="precision">±5 - 15 cm</span>
+            </div>
+            <div class="card">
+                <h3> RTK + NTRIP</h3>
+                <p>RTK vía internet con redes CORS.</p>
+                <span class="precision">±2 - 5 cm</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- SECCIÓN 8: CHART.JS -->
+    <section>
+        <h2>8. Comparativa de Métodos</h2>
+        <div class="chart-container">
+            <canvas id="chartPrecision"></canvas>
+        </div>
+        <div class="chart-container">
+            <canvas id="chartCosto"></canvas>
+        </div>
+    </section>
+
+    <!-- SECCIÓN 9: QUIZ -->
+    <section>
+        <h2>9. Evaluación Interactiva</h2>
+        <div id="quiz-container"></div>
+        <div id="quiz-score" style="text-align:center; font-size:1.3em; margin-top:20px; color:#4fc3f7;"></div>
+    </section>
+
+</div>
+
+<footer>
+    <p>🌾 Página educativa sobre Agricultura de Precisión | Correcciones Diferenciales GNSS</p>
+</footer>
+
+<script>
+// ============================================
+// THREE.JS - ESCENA 3D CON CAMPO DE CULTIVO
+// ============================================
+let scene, camera, renderer, controls;
+let satellites = [];
+let signalLines = [];
+let baseStation, rover, sbasSatellite, tractor;
+let currentMode = 'rtk';
+let autoRotate = true;
+let simSpeed = 1;
+let numSatellites = 6;
+let baseRoverDist = 500;
+let showSBAS = false;
+let clock = new THREE.Clock();
+
+function initScene() {
+    const container = document.getElementById('scene3d');
+    const width = container.clientWidth;
+    const height = container.clientHeight || 600;
+    
+    // Escena
+    scene = new THREE.Scene();
+    scene.fog = new THREE.Fog(0x87CEEB, 50, 200);
+    
+    // Cámara
+    camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
+    camera.position.set(25, 20, 25);
+    camera.lookAt(0, 0, 0);
+    
+    // Renderer
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setSize(width, height);
+    renderer.setPixelRatio(window.devicePixelRatio);
+    renderer.shadowMap.enabled = true;
+    container.appendChild(renderer.domElement);
+    
+    // Controles orbitales
+    controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+    controls.autoRotate = true;
+    controls.autoRotateSpeed = 0.5;
+    
+    // Luces
+    const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambientLight);
+    
+    const sunLight = new THREE.DirectionalLight(0xffffff, 1.0);
+    sunLight.position.set(50, 50, 50);
+    sunLight.castShadow = true;
+    sunLight.shadow.mapSize.width = 2048;
+    sunLight.shadow.mapSize.height = 2048;
+    scene.add(sunLight);
+    
+    const hemiLight = new THREE.HemisphereLight(0x87CEEB, 0x4caf50, 0.4);
+    scene.add(hemiLight);
+    
+    // Cielo (esfera grande azul)
+    const skyGeo = new THREE.SphereGeometry(150, 32, 32);
+    const skyMat = new THREE.MeshBasicMaterial({ 
+        color: 0x87CEEB, 
+        side: THREE.BackSide 
+    });
+    const sky = new THREE.Mesh(skyGeo, skyMat);
+    scene.add(sky);
+    
+    // Campo de cultivo (plano verde)
+    createField();
+    
+    // Estación base
+    createBaseStation();
+    
+    // Tractor (rover)
+    createTractor();
+    
+    // Satélites
+    updateSatellites();
+    
+    // Satélite SBAS
+    createSBASSatellite();
+    
+    // Líneas de señal
+    updateSignalLines();
+    
+    // Eventos
+    window.addEventListener('resize', onWindowResize);
+    
+    // Iniciar animación
+    animate();
+}
+
+function createField() {
+    // Suelo principal (campo verde)
+    const fieldGeo = new THREE.PlaneGeometry(80, 80, 20, 20);
+    const fieldMat = new THREE.MeshLambertMaterial({ color: 0x4caf50 });
+    const field = new THREE.Mesh(fieldGeo, fieldMat);
+    field.rotation.x = -Math.PI / 2;
+    field.receiveShadow = true;
+    scene.add(field);
+    
+    // Surcos del campo (líneas marrones)
+    for (let i = -35; i <= 35; i += 2) {
+        const furrowGeo = new THREE.PlaneGeometry(0.3, 70);
+        const furrowMat = new THREE.MeshLambertMaterial({ color: 0x795548 });
+        const furrow = new THREE.Mesh(furrowGeo, furrowMat);
+        furrow.rotation.x = -Math.PI / 2;
+        furrow.position.set(i, 0.01, 0);
+        scene.add(furrow);
+    }
+    
+    // Bordes del campo
+    const borderGeo = new THREE.PlaneGeometry(82, 2);
+    const borderMat = new THREE.MeshLambertMaterial({ color: 0x8d6e63 });
+    const border1 = new THREE.Mesh(borderGeo, borderMat);
+    border1.rotation.x = -Math.PI / 2;
+    border1.position.set(0, 0.01, -40);
+    scene.add(border1);
+    
+    const border2 = border1.clone();
+    border2.position.set(0, 0.01, 40);
+    scene.add(border2);
+    
+    // Árboles decorativos en los bordes
+    for (let i = 0; i < 8; i++) {
+        createTree(-42 + Math.random() * 4, -35 + Math.random() * 70);
+        createTree(42 - Math.random() * 4, -35 + Math.random() * 70);
+    }
+}
+
+function createTree(x, z) {
+    const trunkGeo = new THREE.CylinderGeometry(0.2, 0.3, 1.5, 8);
+    const trunkMat = new THREE.MeshLambertMaterial({ color: 0x5d4037 });
+    const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+    trunk.position.set(x, 0.75, z);
+    trunk.castShadow = true;
+    scene.add(trunk);
+    
+    const leavesGeo = new THREE.SphereGeometry(1.2, 8, 8);
+    const leavesMat = new THREE.MeshLambertMaterial({ color: 0x2e7d32 });
+    const leaves = new THREE.Mesh(leavesGeo, leavesMat);
+    leaves.position.set(x, 2, z);
+    leaves.castShadow = true;
+    scene.add(leaves);
+}
+
+function createBaseStation() {
+    const group = new THREE.Group();
+    
+    // Base/trípode
+    const baseGeo = new THREE.CylinderGeometry(0.3, 0.5, 0.5, 8);
+    const baseMat = new THREE.MeshLambertMaterial({ color: 0x424242 });
+    const base = new THREE.Mesh(baseGeo, baseMat);
+    base.position.y = 0.25;
+    group.add(base);
+    
+    // Poste
+    const poleGeo = new THREE.CylinderGeometry(0.1, 0.1, 2, 8);
+    const poleMat = new THREE.MeshLambertMaterial({ color: 0x757575 });
+    const pole = new THREE.Mesh(poleGeo, poleMat);
+    pole.position.y = 1.5;
+    group.add(pole);
+    
+    // Antena (domo rojo)
+    const antennaGeo = new THREE.SphereGeometry(0.5, 16, 16);
+    const antennaMat = new THREE.MeshLambertMaterial({ color: 0xf44336, emissive: 0x550000 });
+    const antenna = new THREE.Mesh(antennaGeo, antennaMat);
+    antenna.position.y = 2.7;
+    group.add(antenna);
+    
+    // Cable
+    const cableGeo = new THREE.CylinderGeometry(0.05, 0.05, 1, 8);
+    const cableMat = new THREE.MeshLambertMaterial({ color: 0x212121 });
+    const cable = new THREE.Mesh(cableGeo, cableMat);
+    cable.position.y = 2.2;
+    group.add(cable);
+    
+    group.position.set(-8, 0, 0);
+    scene.add(group);
+    baseStation = group;
+}
+
+function createTractor() {
+    const group = new THREE.Group();
+    
+    // Cuerpo del tractor
+    const bodyGeo = new THREE.BoxGeometry(2, 1.2, 1.5);
+    const bodyMat = new THREE.MeshLambertMaterial({ color: 0x00bcd4 });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    body.position.y = 1;
+    body.castShadow = true;
+    group.add(body);
+    
+    // Cabina
+    const cabinGeo = new THREE.BoxGeometry(1.2, 1, 1.3);
+    const cabinMat = new THREE.MeshLambertMaterial({ color: 0x0097a7 });
+    const cabin = new THREE.Mesh(cabinGeo, cabinMat);
+    cabin.position.set(-0.3, 2, 0);
+    cabin.castShadow = true;
+    group.add(cabin);
+    
+    // Ruedas traseras grandes
+    const wheelGeo = new THREE.CylinderGeometry(0.8, 0.8, 0.4, 16);
+    const wheelMat = new THREE.MeshLambertMaterial({ color: 0x212121 });
+    const wheel1 = new THREE.Mesh(wheelGeo, wheelMat);
+    wheel1.rotation.z = Math.PI / 2;
+    wheel1.position.set(-0.7, 0.8, 0.9);
+    group.add(wheel1);
+    const wheel2 = wheel1.clone();
+    wheel2.position.set(-0.7, 0.8, -0.9);
+    group.add(wheel2);
+    
+    // Ruedas delanteras pequeñas
+    const wheelFGeo = new THREE.CylinderGeometry(0.5, 0.5, 0.3, 16);
+    const wheelF1 = new THREE.Mesh(wheelFGeo, wheelMat);
+    wheelF1.rotation.z = Math.PI / 2;
+    wheelF1.position.set(0.8, 0.5, 0.9);
+    group.add(wheelF1);
+    const wheelF2 = wheelF1.clone();
+    wheelF2.position.set(0.8, 0.5, -0.9);
+    group.add(wheelF2);
+    
+    // Antena GPS en el tractor
+    const antPoleGeo = new THREE.CylinderGeometry(0.05, 0.05, 1.5, 8);
+    const antPoleMat = new THREE.MeshLambertMaterial({ color: 0x757575 });
+    const antPole = new THREE.Mesh(antPoleGeo, antPoleMat);
+    antPole.position.set(0, 2.5, 0);
+    group.add(antPole);
+    
+    const antDomeGeo = new THREE.SphereGeometry(0.3, 16, 16);
+    const antDomeMat = new THREE.MeshLambertMaterial({ color: 0x00e5ff, emissive: 0x003333 });
+    const antDome = new THREE.Mesh(antDomeGeo, antDomeMat);
+    antDome.position.set(0, 3.3, 0);
+    group.add(antDome);
+    
+    group.position.set(8, 0, 0);
+    scene.add(group);
+    rover = group;
+    tractor = group;
+}
+
+function createSBASSatellite() {
+    const group = new THREE.Group();
+    
+    // Cuerpo principal
+    const bodyGeo = new THREE.BoxGeometry(1.5, 1, 1);
+    const bodyMat = new THREE.MeshLambertMaterial({ color: 0xe91e63, emissive: 0x440022 });
+    const body = new THREE.Mesh(bodyGeo, bodyMat);
+    group.add(body);
+    
+    // Paneles solares
+    const panelGeo = new THREE.BoxGeometry(3, 0.1, 1.5);
+    const panelMat = new THREE.MeshLambertMaterial({ color: 0x1565c0, emissive: 0x001133 });
+    const panel1 = new THREE.Mesh(panelGeo, panelMat);
+    panel1.position.set(2.5, 0, 0);
+    group.add(panel1);
+    const panel2 = panel1.clone();
+    panel2.position.set(-2.5, 0, 0);
+    group.add(panel2);
+    
+    // Antena
+    const antGeo = new THREE.ConeGeometry(0.4, 0.8, 16);
+    const antMat = new THREE.MeshLambertMaterial({ color: 0xffffff });
+    const ant = new THREE.Mesh(antGeo, antMat);
+    ant.position.set(0, -0.8, 0);
+    ant.rotation.x = Math.PI;
+    group.add(ant);
+    
+    group.position.set(0, 35, 0);
+    group.visible = false;
+    scene.add(group);
+    sbasSatellite = group;
+}
+
+function updateSatellites() {
+    // Eliminar satélites existentes
+    satellites.forEach(s => scene.remove(s));
+    satellites = [];
+    
+    const satGeo = new THREE.BoxGeometry(0.8, 0.5, 0.5);
+    const satMat = new THREE.MeshLambertMaterial({ color: 0xffc107, emissive: 0x553300 });
+    
+    for (let i = 0; i < numSatellites; i++) {
+        const sat = new THREE.Mesh(satGeo, satMat);
+        const angle = (i / numSatellites) * Math.PI * 2;
+        const radius = 15 + Math.random() * 5;
+        const height = 12 + Math.random() * 8;
+        sat.userData = { 
+            angle: angle, 
+            radius: radius, 
+            height: height,
+            speed: 0.2 + Math.random() * 0.3
+        };
+        sat.position.x = Math.cos(angle) * radius;
+        sat.position.y = height;
+        sat.position.z = Math.sin(angle) * radius;
+        scene.add(sat);
+        satellites.push(sat);
+    }
+    
+    document.getElementById('info-sats').textContent = numSatellites;
+    updatePDOP();
+}
+
+function updatePDOP() {
+    // PDOP simulado: mejor con más satélites
+    const pdop = Math.max(1.0, 6.0 - numSatellites * 0.4);
+    document.getElementById('info-pdop').textContent = pdop.toFixed(1);
+}
+
+function updateSignalLines() {
+    // Limpiar líneas anteriores
+    signalLines.forEach(l => scene.remove(l));
+    signalLines = [];
+    
+    if (currentMode === 'rtk') {
+        // Señales de satélites a base y rover
+        satellites.forEach(sat => {
+            // Satélite -> Base
+            const lineGeo1 = new THREE.BufferGeometry().setFromPoints([
+                sat.position, baseStation.position.clone().add(new THREE.Vector3(0, 2.7, 0))
+            ]);
+            const lineMat1 = new THREE.LineBasicMaterial({ color: 0xffff00, transparent: true, opacity: 0.4 });
+            const line1 = new THREE.Line(lineGeo1, lineMat1);
+            scene.add(line1);
+            signalLines.push(line1);
+            
+            // Satélite -> Rover
+            const lineGeo2 = new THREE.BufferGeometry().setFromPoints([
+                sat.position, rover.position.clone().add(new THREE.Vector3(0, 3.3, 0))
+            ]);
+            const lineMat2 = new THREE.LineBasicMaterial({ color: 0xffff00, transparent: true, opacity: 0.4 });
+            const line2 = new THREE.Line(lineGeo2, lineMat2);
+            scene.add(line2);
+            signalLines.push(line2);
+        });
+        
+        // Corrección Base -> Rover (línea magenta)
+        const corrGeo = new THREE.BufferGeometry().setFromPoints([
+            baseStation.position.clone().add(new THREE.Vector3(0, 2.7, 0)),
+            rover.position.clone().add(new THREE.Vector3(0, 3.3, 0))
+        ]);
+        const corrMat = new THREE.LineBasicMaterial({ color: 0xff00ff, linewidth: 3 });
+        const corrLine = new THREE.Line(corrGeo, corrMat);
+        scene.add(corrLine);
+        signalLines.push(corrLine);
+        
+    } else if (currentMode === 'sbas') {
+        sbasSatellite.visible = true;
+        
+        // SBAS -> Base
+        const lineGeo1 = new THREE.BufferGeometry().setFromPoints([
+            sbasSatellite.position, baseStation.position.clone().add(new THREE.Vector3(0, 2.7, 0))
+        ]);
+        const lineMat1 = new THREE.LineBasicMaterial({ color: 0xff4081, transparent: true, opacity: 0.7 });
+        const line1 = new THREE.Line(lineGeo1, lineMat1);
+        scene.add(line1);
+        signalLines.push(line1);
+        
+        // SBAS -> Rover
+        const lineGeo2 = new THREE.BufferGeometry().setFromPoints([
+            sbasSatellite.position, rover.position.clone().add(new THREE.Vector3(0, 3.3, 0))
+        ]);
+        const lineMat2 = new THREE.LineBasicMaterial({ color: 0xff4081, transparent: true, opacity: 0.7 });
+        const line2 = new THREE.Line(lineGeo2, lineMat2);
+        scene.add(line2);
+        signalLines.push(line2);
+        
+        // Satélites GNSS también visibles
+        satellites.forEach(sat => {
+            const lineGeo = new THREE.BufferGeometry().setFromPoints([
+                sat.position, rover.position.clone().add(new THREE.Vector3(0, 3.3, 0))
+            ]);
+            const lineMat = new THREE.LineBasicMaterial({ color: 0xffff00, transparent: true, opacity: 0.3 });
+            const line = new THREE.Line(lineGeo, lineMat);
+            scene.add(line);
+            signalLines.push(line);
+        });
+        
+    } else if (currentMode === 'ppp') {
+        satellites.forEach(sat => {
+            const lineGeo = new THREE.BufferGeometry().setFromPoints([
+                sat.position, rover.position.clone().add(new THREE.Vector3(0, 3.3, 0))
+            ]);
+            const lineMat = new THREE.LineBasicMaterial({ color: 0x00ff00, transparent: true, opacity: 0.5 });
+            const line = new THREE.Line(lineGeo, lineMat);
+            scene.add(line);
+            signalLines.push(line);
+        });
+        
+    } else if (currentMode === 'dgps') {
+        satellites.forEach(sat => {
+            const lineGeo1 = new THREE.BufferGeometry().setFromPoints([
+                sat.position, baseStation.position.clone().add(new THREE.Vector3(0, 2.7, 0))
+            ]);
+            const lineMat1 = new THREE.LineBasicMaterial({ color: 0xff9800, transparent: true, opacity: 0.4 });
+            const line1 = new THREE.Line(lineGeo1, lineMat1);
+            scene.add(line1);
+            signalLines.push(line1);
+            
+            const lineGeo2 = new THREE.BufferGeometry().setFromPoints([
+                sat.position, rover.position.clone().add(new THREE.Vector3(0, 3.3, 0))
+            ]);
+            const lineMat2 = new THREE.LineBasicMaterial({ color: 0xff9800, transparent: true, opacity: 0.4 });
+            const line2 = new THREE.Line(lineGeo2, lineMat2);
+            scene.add(line2);
+            signalLines.push(line2);
+        });
+        
+        const corrGeo = new THREE.BufferGeometry().setFromPoints([
+            baseStation.position.clone().add(new THREE.Vector3(0, 2.7, 0)),
+            rover.position.clone().add(new THREE.Vector3(0, 3.3, 0))
+        ]);
+        const corrMat = new THREE.LineBasicMaterial({ color: 0xff9800, linewidth: 2 });
+        const corrLine = new THREE.Line(corrGeo, corrMat);
+        scene.add(corrLine);
+        signalLines.push(corrLine);
+    }
+}
+
+function updateModeDescription() {
+    const desc = document.getElementById('mode-description');
+    const descriptions = {
+        'rtk': '<strong>📡 Modo RTK:</strong> La estación base (roja) envía correcciones en tiempo real al tractor (cian) vía radio o NTRIP. Los satélites GNSS (amarillos) transmiten señales a ambos receptores. Precisión: ±1-3 cm.',
+        'sbas': '<strong>🛰️ Modo SBAS:</strong> Un satélite geoestacionario (rosa) a 36,000 km difunde correcciones para toda la región. No requiere base local. Ejemplos: WAAS (EEUU), EGNOS (Europa). Precisión: ±1-2 m.',
+        'ppp': '<strong>🌐 Modo PPP:</strong> El tractor usa órbitas y relojes precisos del IGS. No requiere base local pero necesita 15-30 min de convergencia. Precisión: ±5-15 cm.',
+        'dgps': '<strong> Modo DGPS:</strong> Corrección basada en pseudocódigos. La base envía correcciones de pseudodistancia al rover. Precisión: ±0.5-1 m.'
+    };
+    desc.innerHTML = descriptions[currentMode];
+    document.getElementById('info-mode').textContent = currentMode.toUpperCase();
+}
+
+function updatePrecisionInfo() {
+    let precision;
+    const distKm = baseRoverDist / 1000;
+    
+    if (currentMode === 'rtk') {
+        precision = (1 + distKm * 0.1).toFixed(1);
+        document.getElementById('info-precision').textContent = `±${precision} cm`;
+    } else if (currentMode === 'sbas') {
+        document.getElementById('info-precision').textContent = '±100-200 cm';
+    } else if (currentMode === 'ppp') {
+        document.getElementById('info-precision').textContent = '±5-15 cm';
+    } else if (currentMode === 'dgps') {
+        precision = (50 + distKm * 5).toFixed(0);
+        document.getElementById('info-precision').textContent = `±${precision} cm`;
+    }
+    
+    document.getElementById('info-dist').textContent = `${baseRoverDist} m`;
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+    
+    const delta = clock.getDelta() * simSpeed;
+    
+    // Mover satélites
+    satellites.forEach(sat => {
+        sat.userData.angle += sat.userData.speed * delta * 0.1;
+        sat.position.x = Math.cos(sat.userData.angle) * sat.userData.radius;
+        sat.position.z = Math.sin(sat.userData.angle) * sat.userData.radius;
+        sat.position.y = sat.userData.height + Math.sin(sat.userData.angle * 2) * 2;
+    });
+    
+    // Mover tractor lentamente por el campo
+    if (tractor) {
+        const time = clock.getElapsedTime() * 0.1 * simSpeed;
+        tractor.position.x = 8 + Math.sin(time) * 3;
+        tractor.position.z = Math.cos(time * 0.7) * 2;
+        tractor.rotation.y = Math.atan2(Math.cos(time) * 3 * 0.1, -Math.sin(time * 0.7) * 2 * 0.1);
+    }
+    
+    // Actualizar líneas de señal
+    if (signalLines.length > 0) {
+        updateSignalLines();
+    }
+    
+    controls.update();
+    renderer.render(scene, camera);
+}
+
+function onWindowResize() {
+    const container = document.getElementById('scene3d');
+    const width = container.clientWidth;
+    const height = container.clientHeight || 600;
+    camera.aspect = width / height;
+    camera.updateProjectionMatrix();
+    renderer.setSize(width, height);
+}
+
+// Controles de la escena
+document.getElementById('btn-rtk').onclick = () => { setMode('rtk', 'btn-rtk'); };
+document.getElementById('btn-sbas').onclick = () => { setMode('sbas', 'btn-sbas'); };
+document.getElementById('btn-ppp').onclick = () => { setMode('ppp', 'btn-ppp'); };
+document.getElementById('btn-dgps').onclick = () => { setMode('dgps', 'btn-dgps'); };
+document.getElementById('btn-rotate').onclick = () => { 
+    autoRotate = !autoRotate; 
+    controls.autoRotate = autoRotate;
+};
+document.getElementById('btn-reset').onclick = () => {
+    camera.position.set(25, 20, 25);
+    camera.lookAt(0, 0, 0);
+    controls.reset();
+};
+document.getElementById('btn-toggle-sbas').onclick = () => {
+    showSBAS = !showSBAS;
+    sbasSatellite.visible = showSBAS;
+    document.getElementById('btn-toggle-sbas').textContent = showSBAS ? '🙈 Ocultar SBAS' : '👁️ Mostrar SBAS';
+};
+
+function setMode(mode, btnId) {
+    currentMode = mode;
+    document.querySelectorAll('.controls-3d button').forEach(b => b.classList.remove('active'));
+    document.getElementById(btnId).classList.add('active');
+    updateSignalLines();
+    updateModeDescription();
+    updatePrecisionInfo();
+}
+
+// Sliders
+document.getElementById('num-satellites').addEventListener('input', (e) => {
+    numSatellites = parseInt(e.target.value);
+    document.getElementById('num-sats-val').textContent = numSatellites;
+    updateSatellites();
+    updateSignalLines();
+});
+
+document.getElementById('dist-base-rover').addEventListener('input', (e) => {
+    baseRoverDist = parseInt(e.target.value);
+    document.getElementById('dist-br-val').textContent = baseRoverDist;
+    // Mover rover
+    const scale = baseRoverDist / 500;
+    rover.position.x = 8 * scale;
+    updateSignalLines();
+    updatePrecisionInfo();
+});
+
+document.getElementById('sim-speed').addEventListener('input', (e) => {
+    simSpeed = parseFloat(e.target.value);
+    document.getElementById('speed-val').textContent = simSpeed + 'x';
+});
+
+// Inicializar escena cuando cargue la página
+window.addEventListener('load', initScene);
+
+// ============================================
+// FUNCIONES AUXILIARES
+// ============================================
+function toggleAccordion(header) {
+    const content = header.nextElementSibling;
+    const isActive = content.classList.contains('active');
+    
+    // Cerrar todos
+    document.querySelectorAll('.accordion-content').forEach(c => c.classList.remove('active'));
+    
+    // Abrir el clickeado si no estaba activo
+    if (!isActive) {
+        content.classList.add('active');
+    }
+}
+
+// ============================================
+// CALCULADORAS
+// ============================================
+function calcularPrecision() {
+    const d = parseFloat(document.getElementById('calc-distancia').value);
+    const s0 = parseFloat(document.getElementById('calc-precision-base').value);
+    const k = parseFloat(document.getElementById('calc-ppm').value);
+    
+    const sigma = s0 + k * d;
+    const resultado = document.getElementById('calc-resultado-precision');
+    resultado.style.display = 'block';
+    resultado.innerHTML = `
+        <strong>📊 Resultado:</strong><br>
+        Precisión horizontal esperada: <strong>${sigma.toFixed(1)} mm</strong> = <strong>${(sigma/10).toFixed(2)} cm</strong><br>
+        <small>Fórmula: σ = ${s0} + ${k} × ${d} = ${sigma.toFixed(1)} mm</small>
+    `;
+}
+
+function calcularDistanciaMaxima() {
+    const precisionDeseada = parseFloat(document.getElementById('calc-precision-deseada').value) * 10; // convertir a mm
+    const s0 = parseFloat(document.getElementById('calc-precision-base2').value);
+    const k = parseFloat(document.getElementById('calc-ppm2').value);
+    
+    const dMax = (precisionDeseada - s0) / k;
+    const resultado = document.getElementById('calc-resultado-distancia');
+    resultado.style.display = 'block';
+    
+    if (dMax <= 0) {
+        resultado.innerHTML = `<strong>⚠️ La precisión deseada es menor que la precisión base del receptor.</strong>`;
+    } else {
+        resultado.innerHTML = `
+            <strong>📏 Resultado:</strong><br>
+            Distancia máxima a la base: <strong>${dMax.toFixed(1)} km</strong><br>
+            <small>Fórmula: d = (${precisionDeseada} - ${s0}) / ${k} = ${dMax.toFixed(1)} km</small>
+        `;
+    }
+}
+
+// ============================================
+// D3.JS - SIMULADOR
+// ============================================
+const margin = { top: 30, right: 150, bottom: 50, left: 60 };
+const width = 900 - margin.left - margin.right;
+const height = 400 - margin.top - margin.bottom;
+
+const svg = d3.select('#d3-chart')
+    .append('svg')
+    .attr('width', width + margin.left + margin.right)
+    .attr('height', height + margin.top + margin.bottom)
+    .append('g')
+    .attr('transform', `translate(${margin.left},${margin.top})`);
+
+const x = d3.scaleLinear().domain([0, 50]).range([0, width]);
+const y = d3.scaleLinear().domain([0, 50]).range([height, 0]);
+
+svg.append('g')
+    .attr('transform', `translate(0,${height})`)
+    .call(d3.axisBottom(x).ticks(10))
+    .selectAll('text').style('fill', '#e0e0e0');
+
+svg.append('g')
+    .call(d3.axisLeft(y).ticks(10))
+    .selectAll('text').style('fill', '#e0e0e0');
+
+svg.selectAll('.domain, .tick line').style('stroke', '#e0e0e0');
+
+svg.append('text')
+    .attr('x', width / 2).attr('y', height + 40)
+    .attr('fill', '#e0e0e0').style('text-anchor', 'middle')
+    .text('Distancia a la base (km)');
+
+svg.append('text')
+    .attr('transform', 'rotate(-90)')
+    .attr('x', -height / 2).attr('y', -45)
+    .attr('fill', '#e0e0e0').style('text-anchor', 'middle')
+    .text('Precisión (cm)');
+
+function precisionRTK(d, s) { return Math.min(50, 1 + 0.1 * d * (11 - s)); }
+function precisionPPK(d, s) { return Math.min(50, 2 + 0.08 * d * (11 - s)); }
+function precisionDGPS(d, s) { return Math.min(50, 50 + 0.5 * d * (11 - s)); }
+function precisionPPP(d, s) { return Math.min(50, 15 + 0.05 * d); }
+function precisionSBAS(d, s) { return Math.min(50, 100 + 0.1 * d * (11 - s)); }
+
+const methods = [
+    { name: 'RTK', fn: precisionRTK, color: '#4caf50' },
+    { name: 'PPK', fn: precisionPPK, color: '#2196f3' },
+    { name: 'DGPS', fn: precisionDGPS, color: '#ff9800' },
+    { name: 'PPP', fn: precisionPPP, color: '#9c27b0' },
+    { name: 'SBAS', fn: precisionSBAS, color: '#f44336' }
+];
+
+const paths = {};
+methods.forEach(m => {
+    paths[m.name] = svg.append('path')
+        .attr('fill', 'none')
+        .attr('stroke', m.color)
+        .attr('stroke-width', 3);
+});
+
+const indicator = svg.append('line')
+    .attr('stroke', '#ffffff')
+    .attr('stroke-width', 2)
+    .attr('stroke-dasharray', '5,5');
+
+const dots = {};
+methods.forEach(m => {
+    dots[m.name] = svg.append('circle')
+        .attr('r', 6)
+        .attr('fill', m.color)
+        .attr('stroke', '#fff')
+        .attr('stroke-width', 2);
+});
+
+const legend = svg.append('g').attr('transform', `translate(${width - 120}, 10)`);
+methods.forEach((m, i) => {
+    legend.append('rect').attr('x', 0).attr('y', i * 20).attr('width', 15).attr('height', 15).attr('fill', m.color);
+    legend.append('text').attr('x', 22).attr('y', i * 20 + 12).attr('fill', '#e0e0e0').style('font-size', '12px').text(m.name);
+});
+
+function updateChart() {
+    const d = +document.getElementById('distancia').value;
+    const s = +document.getElementById('senal').value;
+    const a = +document.getElementById('atm').value;
+    document.getElementById('dist-val').textContent = d;
+    document.getElementById('senal-val').textContent = s;
+    document.getElementById('atm-val').textContent = a;
+    
+    const signalFactor = s / 10;
+    const atmFactor = a / 10;
+    
+    methods.forEach(m => {
+        const lineGen = d3.line()
+            .x(i => x(i))
+            .y(i => y(m.fn(i, s) * (2 - atmFactor)))
+            .curve(d3.curveMonotoneX);
+        
+        const data = d3.range(0, 51);
+        paths[m.name].attr('d', lineGen(data));
+        dots[m.name].attr('cx', x(d)).attr('cy', y(m.fn(d, s) * (2 - atmFactor)));
+    });
+    
+    indicator.attr('x1', x(d)).attr('x2', x(d)).attr('y1', 0).attr('y2', height);
+}
+
+document.getElementById('distancia').addEventListener('input', updateChart);
+document.getElementById('senal').addEventListener('input', updateChart);
+document.getElementById('atm').addEventListener('input', updateChart);
+updateChart();
+
+// ============================================
+// CHART.JS
+// ============================================
+const ctx1 = document.getElementById('chartPrecision').getContext('2d');
+new Chart(ctx1, {
+    type: 'bar',
+    data: {
+        labels: ['Autónomo', 'DGPS', 'SBAS', 'PPP', 'RTK', 'PPK'],
+        datasets: [{
+            label: 'Precisión horizontal (cm)',
+            data: [300, 75, 150, 15, 2, 2],
+            backgroundColor: ['#f44336', '#ff9800', '#ffc107', '#9c27b0', '#4caf50', '#2196f3']
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            title: { display: true, text: 'Precisión típica por método (cm)', color: '#e0e0e0', font: { size: 16 } },
+            legend: { labels: { color: '#e0e0e0' } }
+        },
+        scales: {
+            y: { beginAtZero: true, ticks: { color: '#e0e0e0' }, grid: { color: 'rgba(255,255,255,0.1)' } },
+            x: { ticks: { color: '#e0e0e0' }, grid: { color: 'rgba(255,255,255,0.1)' } }
+        }
+    }
+});
+
+const ctx2 = document.getElementById('chartCosto').getContext('2d');
+new Chart(ctx2, {
+    type: 'radar',
+    data: {
+        labels: ['Precisión', 'Costo equipo', 'Costo operación', 'Facilidad de uso', 'Cobertura', 'Tiempo real'],
+        datasets: [
+            { label: 'RTK', data: [10, 4, 6, 7, 5, 10], borderColor: '#4caf50', backgroundColor: 'rgba(76,175,80,0.2)' },
+            { label: 'PPK', data: [10, 7, 7, 8, 6, 3], borderColor: '#2196f3', backgroundColor: 'rgba(33,150,243,0.2)' },
+            { label: 'PPP', data: [7, 8, 8, 9, 10, 5], borderColor: '#9c27b0', backgroundColor: 'rgba(156,39,176,0.2)' },
+            { label: 'SBAS', data: [5, 9, 9, 10, 10, 10], borderColor: '#ff9800', backgroundColor: 'rgba(255,152,0,0.2)' }
+        ]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            title: { display: true, text: 'Comparación multidimensional de métodos', color: '#e0e0e0', font: { size: 16 } },
+            legend: { labels: { color: '#e0e0e0' } }
+        },
+        scales: {
+            r: {
+                angleLines: { color: 'rgba(255,255,255,0.2)' },
+                grid: { color: 'rgba(255,255,255,0.2)' },
+                pointLabels: { color: '#e0e0e0' },
+                ticks: { color: '#e0e0e0', backdropColor: 'transparent' }
+            }
+        }
+    }
+});
+
+// ============================================
+// QUIZ
+// ============================================
+const questions = [
+    {
+        q: '¿Cuál es la precisión típica del RTK?',
+        options: ['±1-3 metros', '±1-3 centímetros', '±50 centímetros', '±10 metros'],
+        correct: 1,
+        explanation: 'El RTK alcanza precisiones centimétricas (1-3 cm) gracias a la resolución de ambigüedades de fase.'
+    },
+    {
+        q: '¿Qué significa solución "FIX" en RTK?',
+        options: ['Está apagado', 'Resolvió las ambigüedades de fase enteras', 'Tiene error de 1 metro', 'Está en modo autónomo'],
+        correct: 1,
+        explanation: 'La solución FIX indica que las ambigüedades de fase han sido resueltas como números enteros.'
+    },
+    {
+        q: '¿Qué error NO se corrige diferencialmente?',
+        options: ['Error ionosférico', 'Error de efemérides', 'Multicamino local', 'Error de reloj satelital'],
+        correct: 2,
+        explanation: 'El multicamino local depende del entorno del rover y no es común con la base.'
+    },
+    {
+        q: '¿Qué protocolo usa RTK por internet?',
+        options: ['HTTP', 'FTP', 'NTRIP', 'SMTP'],
+        correct: 2,
+        explanation: 'NTRIP (Networked Transport of RTCM via Internet Protocol) es el estándar.'
+    },
+    {
+        q: '¿A qué altitud orbita un satélite SBAS?',
+        options: ['20,000 km', '36,000 km (geoestacionario)', '2,000 km', '500 km'],
+        correct: 1,
+        explanation: 'Los satélites SBAS son geoestacionarios a ~36,000 km sobre el ecuador.'
+    }
+];
+
+const quizContainer = document.getElementById('quiz-container');
+let score = 0;
+
+questions.forEach((q, idx) => {
+    const div = document.createElement('div');
+    div.className = 'quiz-question';
+    div.innerHTML = `<strong>Pregunta ${idx + 1}:</strong> ${q.q}<div class="quiz-options" id="opts-${idx}"></div><div class="feedback" id="fb-${idx}" style="display:none;"></div>`;
+    quizContainer.appendChild(div);
+    
+    const optsDiv = div.querySelector(`#opts-${idx}`);
+    q.options.forEach((opt, i) => {
+        const btn = document.createElement('button');
+        btn.textContent = opt;
+        btn.onclick = () => {
+            const buttons = optsDiv.querySelectorAll('button');
+            buttons.forEach(b => b.disabled = true);
+            const fb = document.getElementById(`fb-${idx}`);
+            fb.style.display = 'block';
+            if (i === q.correct) {
+                btn.classList.add('correct');
+                fb.className = 'feedback ok';
+                fb.textContent = '✅ ¡Correcto! ' + q.explanation;
+                score++;
+            } else {
+                btn.classList.add('wrong');
+                buttons[q.correct].classList.add('correct');
+                fb.className = 'feedback err';
+                fb.textContent = '❌ Incorrecto. ' + q.explanation;
+            }
+            document.getElementById('quiz-score').textContent = `Puntaje: ${score} / ${questions.length}`;
+        };
+        optsDiv.appendChild(btn);
+    });
+});
+</script>
+
+</body>
+</html>
