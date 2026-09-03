@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RTK Master - Simulador Interactivo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: #000;
+            overflow: hidden;
+            color: white;
+        }
+        
+        #game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+        }
+        
+        #scene3d {
+            width: 100%;
+            height: 100%;
+        }
+        
+        .hud-panel {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.85);
+            border: 2px solid #4fc3f7;
+            border-radius: 10px;
+            padding: 15px;
+            z-index: 100;
+            backdrop-filter: blur(5px);
+        }
+        
+        #stats-panel {
+            top: 10px;
+            left: 10px;
+            min-width: 250px;
+        }
+        
+        #mission-panel {
+            top: 10px;
+            right: 10px;
+            min-width: 300px;
+            max-width: 350px;
+        }
+        
+        #controls-hint {
+            bottom: 10px;
+            left: 10px;
+            font-size: 0.85em;
+        }
+        
+        #score-panel {
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            min-width: 200px;
+        }
+        
+        .hud-title {
+            color: #4fc3f7;
+            font-size: 1.1em;
+            font-weight: bold;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #4fc3f7;
+            padding-bottom: 5px;
+        }
+        
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin: 5px 0;
+            font-size: 0.9em;
+        }
+        
+        .stat-label { color: #81d4fa; }
+        .stat-value { 
+            color: #4caf50; 
+            font-weight: bold;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+        
+        .status-fix { background: #4caf50; box-shadow: 0 0 10px #4caf50; }
+        .status-float { background: #ff9800; box-shadow: 0 0 10px #ff9800; }
+        .status-single { background: #f44336; box-shadow: 0 0 10px #f44336; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .mission-text {
+            color: #ffeb3b;
+            font-size: 1em;
+            margin: 10px 0;
+            line-height: 1.4;
+        }
+        
+        .mission-progress {
+            background: rgba(255,255,255,0.1);
+            height: 8px;
+            border-radius: 4px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        
+        .mission-progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #4caf50, #8bc34a);
+            transition: width 0.3s;
+        }
+        
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            z-index: 1000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+        }
+        
+        .question-modal {
+            background: linear-gradient(135deg, #1e3a5f 0%, #0a1929 100%);
+            border: 3px solid #4fc3f7;
+            border-radius: 15px;
+            padding: 30px;
+            max-width: 600px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 0 50px rgba(79,195,247,0.5);
+        }
+        
+        .question-title {
+            color: #ffeb3b;
+            font-size: 1.3em;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .question-text {
+            color: #e0e0e0;
+            font-size: 1.1em;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        
+        .answer-options {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .answer-btn {
+            background: rgba(30,136,229,0.3);
+            border: 2px solid #1e88e5;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: left;
+            font-size: 1em;
+            transition: all 0.3s;
+        }
+        
+        .answer-btn:hover {
+            background: rgba(30,136,229,0.6);
+            transform: translateX(5px);
+        }
+        
+        .answer-btn.correct {
+            background: rgba(76,175,80,0.6);
+            border-color: #4caf50;
+        }
+        
+        .answer-btn.wrong {
+            background: rgba(244,67,54,0.6);
+            border-color: #f44336;
+        }
+        
+        .explanation {
+            background: rgba(79,195,247,0.2);
+            border-left: 4px solid #4fc3f7;
+            padding: 15px;
+            margin-top: 20px;
+            border-radius: 5px;
+            display: none;
+        }
+        
+        .explanation.show {
+            display: block;
+        }
+        
+        .continue-btn {
+            background: #4caf50;
+            border: none;
+            color: white;
+            padding: 12px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            margin-top: 15px;
+            display: none;
+            width: 100%;
+        }
+        
+        .continue-btn.show {
+            display: block;
+        }
+        
+        .control-btn {
+            background: #1e88e5;
+            border: none;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9em;
+            margin: 5px;
+            transition: all 0.3s;
+        }
+        
+        .control-btn:hover {
+            background: #1565c0;
+            transform: translateY(-2px);
+        }
+        
+        .control-btn.danger {
+            background: #f44336;
+        }
+        
+        .control-btn.warning {
+            background: #ff9800;
+        }
+        
+        .notification {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) scale(0.8);
+            background: rgba(76,175,80,0.95);
+            color: white;
+            padding: 20px 40px;
+            border-radius: 10px;
+            font-size: 1.5em;
+            font-weight: bold;
+            z-index: 2000;
+            opacity: 0;
+            pointer-events: none;
+            transition: all 0.3s;
+        }
+        
+        .notification.show {
+            opacity: 1;
+            transform: translate(-50%, -50%) scale(1);
+        }
+        
+        kbd {
+            background: #333;
+            padding: 2px 8px;
+            border-radius: 4px;
+            border: 1px solid #666;
+            font-family: monospace;
+            display: inline-block;
+            margin: 0 2px;
+        }
+        
+        #start-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0a1929 0%, #1e3a5f 100%);
+            z-index: 3000;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+        
+        #start-screen h1 {
+            color: #4fc3f7;
+            font-size: 3em;
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px rgba(79,195,247,0.5);
+        }
+        
+        #start-screen p {
+            color: #e0e0e0;
+            font-size: 1.2em;
+            margin: 10px 0;
+            max-width: 600px;
+        }
+        
+        .start-btn {
+            background: #4caf50;
+            border: none;
+            color: white;
+            padding: 20px 60px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1.5em;
+            margin-top: 30px;
+            transition: all 0.3s;
+            box-shadow: 0 0 20px rgba(76,175,80,0.5);
+        }
+        
+        .start-btn:hover {
+            background: #45a049;
+            transform: scale(1.1);
+        }
+        
+        #error-message {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(244,67,54,0.95);
+            color: white;
+            padding: 30px;
+            border-radius: 10px;
+            font-size: 1.2em;
+            z-index: 4000;
+            display: none;
+            max-width: 500px;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <div id="scene3d"></div>
+    
+    <div id="stats-panel" class="hud-panel">
+        <div class="hud-title">📊 Estado RTK</div>
+        <div class="stat-row">
+            <span class="stat-label">Estado:</span>
+            <span><span class="status-indicator status-single" id="status-dot"></span><span class="stat-value" id="status-text">SINGLE</span></span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Satélites:</span>
+            <span class="stat-value" id="sat-count">0</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">PDOP:</span>
+            <span class="stat-value" id="pdop-value">-</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Precisión H:</span>
+            <span class="stat-value" id="precision-h">-</span>
+        </div>
+        <div class="stat-row">
+            <span class="stat-label">Precisión V:</span>
+            <span class="stat-value" id="precision-v">-</span>
+        </div>
+        <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #4fc3f7;">
+            <div class="stat-row">
+                <span class="stat-label">Tractor:</span>
+                <span class="stat-value" id="tractor-pos">X:0, Z:0</span>
+            </div>
+        </div>
+    </div>
+    
+    <div id="score-panel" class="hud-panel">
+        <div class="hud-title">🏆 Puntuación</div>
+        <div style="font-size: 2em; color: #ffeb3b; font-weight: bold;" id="score">0</div>
+        <div style="font-size: 0.9em; color: #81d4fa;">puntos</div>
+        <div style="margin-top: 10px; font-size: 0.9em;">
+            <span class="stat-label">Nivel:</span> <span class="stat-value" id="level">1</span>
+        </div>
+    </div>
+    
+    <div id="mission-panel" class="hud-panel">
+        <div class="hud-title"> Misión Actual</div>
+        <div class="mission-text" id="mission-text">Cargando misión...</div>
+        <div class="mission-progress">
+            <div class="mission-progress-bar" id="mission-progress" style="width: 0%"></div>
+        </div>
+        <div style="margin-top: 15px;">
+            <button class="control-btn" onclick="game.addSatellite()">➕ Satélite</button>
+            <button class="control-btn danger" onclick="game.removeSatellite()">➖ Quitar</button>
+            <button class="control-btn warning" onclick="game.toggleOrbits()">⏸️ Órbitas</button>
+        </div>
+        <div style="margin-top: 10px;">
+            <button class="control-btn" onclick="game.resetTractor()">🔄 Reset</button>
+        </div>
+    </div>
+    
+    <div id="controls-hint" class="hud-panel">
+        <div class="hud-title">🎮 Controles</div>
+        <div><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> Mover tractor</div>
+        <div><kbd>Espacio</kbd> Frenar</div>
+        <div><kbd>Clic</kbd> Seleccionar satélite</div>
+        <div><kbd>Rueda</kbd> Zoom | <kbd>Arrastrar</kbd> Rotar</div>
+    </div>
+    
+    <div id="question-modal" class="modal-overlay">
+        <div class="question-modal">
+            <div class="question-title">📚 Pregunta de Conocimiento</div>
+            <div class="question-text" id="q-text"></div>
+            <div class="answer-options" id="q-options"></div>
+            <div class="explanation" id="q-explanation"></div>
+            <button class="continue-btn" id="q-continue" onclick="game.closeQuestion()">Continuar →</button>
+        </div>
+    </div>
+    
+    <div id="notification" class="notification"></div>
+    
+    <div id="error-message">
+        <h2>⚠️ Error al cargar el juego</h2>
+        <p id="error-text"></p>
+        <button class="control-btn" onclick="location.reload()" style="margin-top: 20px;">Reintentar</button>
+    </div>
+    
+    <div id="start-screen">
+        <h1>🛰️ RTK Master</h1>
+        <p>Simulador Interactivo de Posicionamiento GNSS</p>
+        <p style="font-size: 0.9em; margin-top: 20px;">
+            Aprende agricultura de precisión mientras juegas<br>
+            Controla el tractor, gestiona satélites y responde preguntas
+        </p>
+        <button class="start-btn" onclick="game.start()">🎮 COMENZAR JUEGO</button>
+        <div style="margin-top: 30px; font-size: 0.85em; color: #81d4fa;">
+            <p>Objetivo: Alcanza precisión FIX (±3 cm) completando misiones</p>
+            <p>Responde preguntas correctamente para ganar puntos extra</p>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+// Verificar que Three.js cargó
+if (typeof THREE === 'undefined') {
+    document.getElementById('start-screen').style.display = 'none';
+    document.getElementById('error-message').style.display = 'block';
+    document.getElementById('error-text').textContent = 'No se pudo cargar Three.js. Verifica tu conexión a internet.';
+    throw new Error('Three.js no cargó');
+}
+
+// Banco de preguntas
+const questionsBank = [
+    {
+        question: "¿Qué significa RTK?",
+        options: ["Real-Time Kinematic", "Radio Transmission Kit", "Rapid Tracking System", "Remote Terrain Knowledge"],
+        correct: 0,
+        explanation: "RTK significa Real-Time Kinematic (Cinemático en Tiempo Real). Es una técnica que usa correcciones diferenciales para lograr precisión centimétrica."
+    },
+    {
+        question: "¿Cuál es la precisión típica de RTK en modo FIX?",
+        options: ["±1-3 metros", "±1-3 centímetros", "±10-30 centímetros", "±50 centímetros"],
+        correct: 1,
+        explanation: "En modo FIX, RTK alcanza precisiones de 1-3 cm horizontalmente y 2-5 cm verticalmente."
+    },
+    {
+        question: "¿Cuántos satélites mínimos se necesitan para RTK?",
+        options: ["3 satélites", "4 satélites", "6 satélites", "8 satélites"],
+        correct: 1,
+        explanation: "Se necesitan al menos 4 satélites para calcular una posición 3D y corregir el error del reloj."
+    },
+    {
+        question: "¿Qué tipo de error NO se corrige con RTK diferencial?",
+        options: ["Error ionosférico", "Error de reloj del satélite", "Multicamino local", "Error de efemérides"],
+        correct: 2,
+        explanation: "El multicamino local depende del entorno inmediato del receptor y no es común con la base."
+    },
+    {
+        question: "¿Qué indica un PDOP bajo (ej: 1.5)?",
+        options: ["Mala geometría de satélites", "Buena geometría de satélites", "Pocos satélites visibles", "Mucha interferencia"],
+        correct: 1,
+        explanation: "PDOP bajo (< 3) indica excelente geometría: los satélites están bien distribuidos en el cielo."
+    },
+    {
+        question: "¿Para qué se usa RTK en agricultura?",
+        options: ["Solo para navegación", "Guía automática de tractores", "Predecir el clima", "Controlar plagas"],
+        correct: 1,
+        explanation: "RTK permite guía automática de tractores con precisión ±2 cm, siembra de precisión y mapas de rendimiento."
+    },
+    {
+        question: "¿Cómo afecta la distancia a la base en RTK?",
+        options: ["No afecta", "Mejora la precisión", "Degrada la precisión ~1 ppm/km", "Solo afecta verticalmente"],
+        correct: 2,
+        explanation: "La precisión se degrada aproximadamente 1 ppm (1 mm/km). A 10 km pierdes ~1 cm de precisión."
+    },
+    {
+        question: "¿Cuál es la diferencia entre FIX y FLOAT?",
+        options: ["FIX es más lento", "FIX tiene ambigüedades enteras resueltas", "FLOAT es más preciso", "No hay diferencia"],
+        correct: 1,
+        explanation: "FIX: ambigüedades resueltas como enteros (precisión cm). FLOAT: ambigüedades como reales (precisión 30-50 cm)."
+    }
+];
+
+// Clase principal del juego
+class RTKGame {
+    constructor() {
+        this.scene = null;
+        this.camera = null;
+        this.renderer = null;
+        this.controls = null;
+        this.satellites = [];
+        this.signalLines = [];
+        this.baseStation = null;
+        this.tractor = null;
+        this.clock = new THREE.Clock();
+        this.raycaster = new THREE.Raycaster();
+        this.mouse = new THREE.Vector2();
+        this.selectedSatellite = null;
+        this.orbitsPaused = false;
+        
+        this.score = 0;
+        this.level = 1;
+        this.missionProgress = 0;
+        this.currentMission = null;
+        this.tractorVelocity = { x: 0, z: 0 };
+        this.tractorRotation = 0;
+        this.keys = {};
+        
+        this.missions = [
+            {
+                id: 1,
+                title: "Primeros Pasos",
+                description: "Agrega al menos 6 satélites",
+                target: () => this.satellites.length >= 6,
+                reward: 100
+            },
+            {
+                id: 2,
+                title: "Precisión Básica",
+                description: "Alcanza modo FLOAT",
+                target: () => {
+                    const pdop = Math.max(1.0, 6.0 - this.satellites.length * 0.4);
+                    return pdop < 4;
+                },
+                reward: 150
+            },
+            {
+                id: 3,
+                title: "Modo FIX",
+                description: "Logra modo FIX (precisión < 5 cm)",
+                target: () => {
+                    const pdop = Math.max(1.0, 6.0 - this.satellites.length * 0.4);
+                    return pdop < 2.5;
+                },
+                reward: 300
+            },
+            {
+                id: 4,
+                title: "Explorador",
+                description: "Mueve el tractor lejos del centro",
+                target: () => this.tractor && (Math.abs(this.tractor.position.x) > 20 || Math.abs(this.tractor.position.z) > 20),
+                reward: 200
+            },
+            {
+                id: 5,
+                title: "Maestro de Satélites",
+                description: "Ten 10 satélites simultáneos",
+                target: () => this.satellites.length >= 10,
+                reward: 250
+            }
+        ];
+        
+        this.currentMissionIndex = 0;
+    }
+    
+    start() {
+        try {
+            document.getElementById('start-screen').style.display = 'none';
+            this.initScene();
+            this.startMission(0);
+            this.showNotification("¡Bienvenido a RTK Master!");
+            setTimeout(() => this.askQuestion(), 2000);
+        } catch (error) {
+            console.error('Error al iniciar:', error);
+            document.getElementById('error-message').style.display = 'block';
+            document.getElementById('error-text').textContent = error.message;
+        }
+    }
+    
+    initScene() {
+        const container = document.getElementById('scene3d');
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+        
+        this.scene = new THREE.Scene();
+        this.scene.fog = new THREE.Fog(0x87CEEB, 50, 200);
+        
+        this.camera = new THREE.PerspectiveCamera(60, width / height, 0.1, 1000);
+        this.camera.position.set(30, 25, 30);
+        this.camera.lookAt(0, 0, 0);
+        
+        this.renderer = new THREE.WebGLRenderer({ antialias: true });
+        this.renderer.setSize(width, height);
+        this.renderer.setPixelRatio(window.devicePixelRatio);
+        this.renderer.shadowMap.enabled = true;
+        container.appendChild(this.renderer.domElement);
+        
+        // Controles manuales simples
+        this.controls = {
+            enableDamping: true,
+            update: () => {},
+            reset: () => {
+                this.camera.position.set(30, 25, 30);
+                this.camera.lookAt(0, 0, 0);
+            }
+        };
+        
+        // Luces
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        this.scene.add(ambientLight);
+        
+        const sunLight = new THREE.DirectionalLight(0xffffff, 1.0);
+        sunLight.position.set(50, 50, 50);
+        sunLight.castShadow = true;
+        this.scene.add(sunLight);
+        
+        // Cielo
+        const skyGeo = new THREE.SphereGeometry(150, 32, 32);
+        const skyMat = new THREE.MeshBasicMaterial({ color: 0x87CEEB, side: THREE.BackSide });
+        const sky = new THREE.Mesh(skyGeo, skyMat);
+        this.scene.add(sky);
+        
+        this.createField();
+        this.createBaseStation();
+        this.createTractor();
+        this.createInitialSatellites();
+        
+        window.addEventListener('resize', () => this.onWindowResize());
+        window.addEventListener('keydown', (e) => { this.keys[e.key.toLowerCase()] = true; });
+        window.addEventListener('keyup', (e) => { this.keys[e.key.toLowerCase()] = false; });
+        this.renderer.domElement.addEventListener('click', (e) => this.onSceneClick(e));
+        
+        this.animate();
+    }
+    
+    createField() {
+        const fieldGeo = new THREE.PlaneGeometry(80, 80);
+        const fieldMat = new THREE.MeshLambertMaterial({ color: 0x4caf50 });
+        const field = new THREE.Mesh(fieldGeo, fieldMat);
+        field.rotation.x = -Math.PI / 2;
+        field.receiveShadow = true;
+        this.scene.add(field);
+        
+        for (let i = -35; i <= 35; i += 2) {
+            const furrowGeo = new THREE.PlaneGeometry(0.3, 70);
+            const furrowMat = new THREE.MeshLambertMaterial({ color: 0x795548 });
+            const furrow = new THREE.Mesh(furrowGeo, furrowMat);
+            furrow.rotation.x = -Math.PI / 2;
+            furrow.position.set(i, 0.01, 0);
+            this.scene.add(furrow);
+        }
+        
+        for (let i = 0; i < 6; i++) {
+            this.createTree(-42, -35 + i * 14);
+            this.createTree(42, -35 + i * 14);
+        }
+    }
+    
+    createTree(x, z) {
+        const trunkGeo = new THREE.CylinderGeometry(0.2, 0.3, 1.5, 8);
+        const trunkMat = new THREE.MeshLambertMaterial({ color: 0x5d4037 });
+        const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+        trunk.position.set(x, 0.75, z);
+        trunk.castShadow = true;
+        this.scene.add(trunk);
+        
+        const leavesGeo = new THREE.SphereGeometry(1.2, 8, 8);
+        const leavesMat = new THREE.MeshLambertMaterial({ color: 0x2e7d32 });
+        const leaves = new THREE.Mesh(leavesGeo, leavesMat);
+        leaves.position.set(x, 2, z);
+        leaves.castShadow = true;
+        this.scene.add(leaves);
+    }
+    
+    createBaseStation() {
+        const group = new THREE.Group();
+        
+        const baseGeo = new THREE.CylinderGeometry(0.3, 0.5, 0.5, 8);
+        const baseMat = new THREE.MeshLambertMaterial({ color: 0x424242 });
+        const base = new THREE.Mesh(baseGeo, baseMat);
+        base.position.y = 0.25;
+        group.add(base);
+        
+        const poleGeo = new THREE.CylinderGeometry(0.1, 0.1, 2, 8);
+        const poleMat = new THREE.MeshLambertMaterial({ color: 0x757575 });
+        const pole = new THREE.Mesh(poleGeo, poleMat);
+        pole.position.y = 1.5;
+        group.add(pole);
+        
+        const antennaGeo = new THREE.SphereGeometry(0.5, 16, 16);
+        const antennaMat = new THREE.MeshLambertMaterial({ color: 0xf44336, emissive: 0x550000 });
+        const antenna = new THREE.Mesh(antennaGeo, antennaMat);
+        antenna.position.y = 2.7;
+        group.add(antenna);
+        
+        group.position.set(-10, 0, 0);
+        this.scene.add(group);
+        this.baseStation = group;
+    }
+    
+    createTractor() {
+        const group = new THREE.Group();
+        
+        const bodyGeo = new THREE.BoxGeometry(2, 1.2, 1.5);
+        const bodyMat = new THREE.MeshLambertMaterial({ color: 0x00bcd4 });
+        const body = new THREE.Mesh(bodyGeo, bodyMat);
+        body.position.y = 1;
+        body.castShadow = true;
+        group.add(body);
+        
+        const cabinGeo = new THREE.BoxGeometry(1.2, 1, 1.3);
+        const cabinMat = new THREE.MeshLambertMaterial({ color: 0x0097a7 });
+        const cabin = new THREE.Mesh(cabinGeo, cabinMat);
+        cabin.position.set(-0.3, 2, 0);
+        cabin.castShadow = true;
+        group.add(cabin);
+        
+        const wheelGeo = new THREE.CylinderGeometry(0.8, 0.8, 0.4, 16);
+        const wheelMat = new THREE.MeshLambertMaterial({ color: 0x212121 });
+        const wheel1 = new THREE.Mesh(wheelGeo, wheelMat);
+        wheel1.rotation.z = Math.PI / 2;
+        wheel1.position.set(-0.7, 0.8, 0.9);
+        group.add(wheel1);
+        const wheel2 = wheel1.clone();
+        wheel2.position.set(-0.7, 0.8, -0.9);
+        group.add(wheel2);
+        
+        const wheelFGeo = new THREE.CylinderGeometry(0.5, 0.5, 0.3, 16);
+        const wheelF1 = new THREE.Mesh(wheelFGeo, wheelMat);
+        wheelF1.rotation.z = Math.PI / 2;
+        wheelF1.position.set(0.8, 0.5, 0.9);
+        group.add(wheelF1);
+        const wheelF2 = wheelF1.clone();
+        wheelF2.position.set(0.8, 0.5, -0.9);
+        group.add(wheelF2);
+        
+        const antPoleGeo = new THREE.CylinderGeometry(0.05, 0.05, 1.5, 8);
+        const antPoleMat = new THREE.MeshLambertMaterial({ color: 0x757575 });
+        const antPole = new THREE.Mesh(antPoleGeo, antPoleMat);
+        antPole.position.set(0, 2.5, 0);
+        group.add(antPole);
+        
+        const antDomeGeo = new THREE.SphereGeometry(0.3, 16, 16);
+        const antDomeMat = new THREE.MeshLambertMaterial({ color: 0x00e5ff, emissive: 0x003333 });
+        const antDome = new THREE.Mesh(antDomeGeo, antDomeMat);
+        antDome.position.set(0, 3.3, 0);
+        group.add(antDome);
+        
+        group.position.set(10, 0, 0);
+        this.scene.add(group);
+        this.tractor = group;
+    }
+    
+    createInitialSatellites() {
+        for (let i = 1; i <= 4; i++) {
+            this.addSatellite();
+        }
+    }
+    
+    addSatellite() {
+        if (this.satellites.length >= 12) {
+            this.showNotification("Máximo de satélites alcanzado");
+            return;
+        }
+        
+        const satGeo = new THREE.BoxGeometry(0.8, 0.5, 0.5);
+        const satMat = new THREE.MeshLambertMaterial({ color: 0xffc107, emissive: 0x553300 });
+        const sat = new THREE.Mesh(satGeo, satMat);
+        
+        const angle = Math.random() * Math.PI * 2;
+        const radius = 15 + Math.random() * 5;
+        const height = 12 + Math.random() * 8;
+        
+        sat.userData = { 
+            id: this.satellites.length + 1,
+            angle: angle, 
+            radius: radius, 
+            height: height,
+            speed: 0.2 + Math.random() * 0.3
+        };
+        
+        sat.position.x = Math.cos(angle) * radius;
+        sat.position.y = height;
+        sat.position.z = Math.sin(angle) * radius;
+        
+        const ringGeo = new THREE.RingGeometry(0.8, 1.2, 32);
+        const ringMat = new THREE.MeshBasicMaterial({ color: 0x00ff00, side: THREE.DoubleSide, transparent: true, opacity: 0 });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.rotation.x = Math.PI / 2;
+        ring.position.y = -0.5;
+        sat.add(ring);
+        sat.userData.selectionRing = ring;
+        
+        this.scene.add(sat);
+        this.satellites.push(sat);
+        this.updateSignalLines();
+        this.updateStats();
+        this.checkMissionProgress();
+    }
+    
+    removeSatellite() {
+        if (this.satellites.length > 4) {
+            const last = this.satellites.pop();
+            if (this.selectedSatellite === last) {
+                this.deselectSatellite();
+            }
+            this.scene.remove(last);
+            this.updateSignalLines();
+            this.updateStats();
+            this.checkMissionProgress();
+        } else {
+            this.showNotification("Mínimo 4 satélites requeridos");
+        }
+    }
+    
+    updateSignalLines() {
+        this.signalLines.forEach(l => this.scene.remove(l));
+        this.signalLines = [];
+        
+        this.satellites.forEach(sat => {
+            const basePos = this.baseStation.position.clone().add(new THREE.Vector3(0, 2.7, 0));
+            const roverPos = this.tractor.position.clone().add(new THREE.Vector3(0, 3.3, 0));
+            
+            const isSelected = this.selectedSatellite === sat;
+            const lineGeo1 = new THREE.BufferGeometry().setFromPoints([sat.position, basePos]);
+            const lineMat1 = new THREE.LineBasicMaterial({ 
+                color: isSelected ? 0x00ff00 : 0xffff00, 
+                transparent: true, 
+                opacity: isSelected ? 0.8 : 0.4 
+            });
+            const line1 = new THREE.Line(lineGeo1, lineMat1);
+            this.scene.add(line1);
+            this.signalLines.push(line1);
+            
+            const lineGeo2 = new THREE.BufferGeometry().setFromPoints([sat.position, roverPos]);
+            const lineMat2 = new THREE.LineBasicMaterial({ 
+                color: isSelected ? 0x00ff00 : 0xffff00, 
+                transparent: true, 
+                opacity: isSelected ? 0.8 : 0.4 
+            });
+            const line2 = new THREE.Line(lineGeo2, lineMat2);
+            this.scene.add(line2);
+            this.signalLines.push(line2);
+        });
+        
+        const corrGeo = new THREE.BufferGeometry().setFromPoints([
+            this.baseStation.position.clone().add(new THREE.Vector3(0, 2.7, 0)),
+            this.tractor.position.clone().add(new THREE.Vector3(0, 3.3, 0))
+        ]);
+        const corrMat = new THREE.LineBasicMaterial({ color: 0xff00ff });
+        const corrLine = new THREE.Line(corrGeo, corrMat);
+        this.scene.add(corrLine);
+        this.signalLines.push(corrLine);
+    }
+    
+    updateTractorMovement(delta) {
+        const speed = 8;
+        const acceleration = 15;
+        const friction = 5;
+        const maxSpeed = speed;
+        
+        let moveX = 0;
+        let moveZ = 0;
+        
+        if (this.keys['w'] || this.keys['arrowup']) moveZ -= 1;
+        if (this.keys['s'] || this.keys['arrowdown']) moveZ += 1;
+        if (this.keys['a'] || this.keys['arrowleft']) moveX -= 1;
+        if (this.keys['d'] || this.keys['arrowright']) moveX += 1;
+        if (this.keys[' ']) {
+            this.tractorVelocity.x *= 0.9;
+            this.tractorVelocity.z *= 0.9;
+        }
+        
+        const len = Math.sqrt(moveX*moveX + moveZ*moveZ);
+        if (len > 0) {
+            moveX /= len;
+            moveZ /= len;
+        }
+        
+        this.tractorVelocity.x += moveX * acceleration * delta;
+        this.tractorVelocity.z += moveZ * acceleration * delta;
+        
+        this.tractorVelocity.x *= (1 - friction * delta);
+        this.tractorVelocity.z *= (1 - friction * delta);
+        
+        const velLen = Math.sqrt(this.tractorVelocity.x**2 + this.tractorVelocity.z**2);
+        if (velLen > maxSpeed) {
+            this.tractorVelocity.x = (this.tractorVelocity.x / velLen) * maxSpeed;
+            this.tractorVelocity.z = (this.tractorVelocity.z / velLen) * maxSpeed;
+        }
+        
+        this.tractor.position.x += this.tractorVelocity.x * delta;
+        this.tractor.position.z += this.tractorVelocity.z * delta;
+        
+        const limit = 38;
+        this.tractor.position.x = Math.max(-limit, Math.min(limit, this.tractor.position.x));
+        this.tractor.position.z = Math.max(-limit, Math.min(limit, this.tractor.position.z));
+        
+        if (velLen > 0.1) {
+            const targetRotation = Math.atan2(this.tractorVelocity.x, this.tractorVelocity.z);
+            this.tractorRotation += (targetRotation - this.tractorRotation) * 0.1;
+            this.tractor.rotation.y = this.tractorRotation;
+        }
+        
+        document.getElementById('tractor-pos').textContent = 
+            `X:${this.tractor.position.x.toFixed(1)}, Z:${this.tractor.position.z.toFixed(1)}`;
+    }
+    
+    updateStats() {
+        const numSats = this.satellites.length;
+        const pdop = Math.max(1.0, 6.0 - numSats * 0.4);
+        
+        const precisionH = 2 * pdop;
+        const precisionV = precisionH * 1.5;
+        
+        document.getElementById('sat-count').textContent = numSats;
+        document.getElementById('pdop-value').textContent = pdop.toFixed(1);
+        document.getElementById('precision-h').textContent = `±${precisionH.toFixed(1)} cm`;
+        document.getElementById('precision-v').textContent = `±${precisionV.toFixed(1)} cm`;
+        
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
+        
+        if (precisionH < 5 && numSats >= 6) {
+            statusDot.className = 'status-indicator status-fix';
+            statusText.textContent = 'FIX';
+        } else if (precisionH < 15 && numSats >= 5) {
+            statusDot.className = 'status-indicator status-float';
+            statusText.textContent = 'FLOAT';
+        } else {
+            statusDot.className = 'status-indicator status-single';
+            statusText.textContent = 'SINGLE';
+        }
+    }
+    
+    startMission(index) {
+        if (index >= this.missions.length) {
+            this.showNotification("¡Felicidades! Completaste todas las misiones");
+            return;
+        }
+        
+        this.currentMission = this.missions[index];
+        this.missionProgress = 0;
+        document.getElementById('mission-text').textContent = 
+            `🎯 ${this.currentMission.title}\n${this.currentMission.description}`;
+        this.updateMissionProgress();
+    }
+    
+    checkMissionProgress() {
+        if (!this.currentMission) return;
+        
+        const progress = this.currentMission.target() ? 100 : this.missionProgress;
+        
+        if (progress === 100 && this.missionProgress < 100) {
+            this.completeMission();
+        }
+        
+        this.missionProgress = progress;
+        this.updateMissionProgress();
+    }
+    
+    updateMissionProgress() {
+        document.getElementById('mission-progress').style.width = `${this.missionProgress}%`;
+    }
+    
+    completeMission() {
+        this.score += this.currentMission.reward;
+        this.showNotification(`¡Misión Completada! +${this.currentMission.reward} pts`);
+        document.getElementById('score').textContent = this.score;
+        
+        setTimeout(() => this.askQuestion(), 1000);
+        
+        this.currentMissionIndex++;
+        if (this.currentMissionIndex < this.missions.length) {
+            setTimeout(() => this.startMission(this.currentMissionIndex), 2000);
+        }
+    }
+    
+    askQuestion() {
+        const question = questionsBank[Math.floor(Math.random() * questionsBank.length)];
+        
+        document.getElementById('q-text').textContent = question.question;
+        document.getElementById('q-explanation').innerHTML = 
+            `<strong>✅ Explicación:</strong><br>${question.explanation}`;
+        document.getElementById('q-explanation').classList.remove('show');
+        document.getElementById('q-continue').classList.remove('show');
+        
+        const optionsDiv = document.getElementById('q-options');
+        optionsDiv.innerHTML = '';
+        
+        question.options.forEach((opt, idx) => {
+            const btn = document.createElement('button');
+            btn.className = 'answer-btn';
+            btn.textContent = `${String.fromCharCode(65 + idx)}) ${opt}`;
+            btn.onclick = () => this.checkAnswer(idx, question.correct, question);
+            optionsDiv.appendChild(btn);
+        });
+        
+        document.getElementById('question-modal').classList.add('active');
+    }
+    
+    checkAnswer(selected, correct, question) {
+        const buttons = document.querySelectorAll('.answer-btn');
+        buttons.forEach((btn, idx) => {
+            btn.disabled = true;
+            if (idx === correct) {
+                btn.classList.add('correct');
+            } else if (idx === selected && idx !== correct) {
+                btn.classList.add('wrong');
+            }
+        });
+        
+        if (selected === correct) {
+            const bonus = 50;
+            this.score += bonus;
+            document.getElementById('score').textContent = this.score;
+            this.showNotification(`¡Correcto! +${bonus} pts`);
+        } else {
+            this.showNotification("Incorrecto");
+        }
+        
+        document.getElementById('q-explanation').classList.add('show');
+        document.getElementById('q-continue').classList.add('show');
+    }
+    
+    closeQuestion() {
+        document.getElementById('question-modal').classList.remove('active');
+        this.level = Math.floor(this.score / 500) + 1;
+        document.getElementById('level').textContent = this.level;
+    }
+    
+    selectSatellite(sat) {
+        if (this.selectedSatellite) {
+            this.selectedSatellite.userData.selectionRing.material.opacity = 0;
+            this.selectedSatellite.scale.set(1, 1, 1);
+        }
+        
+        this.selectedSatellite = sat;
+        sat.userData.selectionRing.material.opacity = 0.8;
+        sat.scale.set(1.5, 1.5, 1.5);
+        this.updateSignalLines();
+    }
+    
+    deselectSatellite() {
+        if (this.selectedSatellite) {
+            this.selectedSatellite.userData.selectionRing.material.opacity = 0;
+            this.selectedSatellite.scale.set(1, 1, 1);
+        }
+        this.selectedSatellite = null;
+        this.updateSignalLines();
+    }
+    
+    onSceneClick(event) {
+        const container = document.getElementById('scene3d');
+        const rect = container.getBoundingClientRect();
+        this.mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        this.mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        
+        this.raycaster.setFromCamera(this.mouse, this.camera);
+        const intersects = this.raycaster.intersectObjects(this.satellites);
+        
+        if (intersects.length > 0) {
+            const clickedSat = intersects[0].object;
+            if (this.selectedSatellite === clickedSat) {
+                this.deselectSatellite();
+            } else {
+                this.selectSatellite(clickedSat);
+            }
+        } else {
+            this.deselectSatellite();
+        }
+    }
+    
+    toggleOrbits() {
+        this.orbitsPaused = !this.orbitsPaused;
+        this.showNotification(this.orbitsPaused ? "Órbitas pausadas" : "Órbitas reanudadas");
+    }
+    
+    resetTractor() {
+        this.tractor.position.set(10, 0, 0);
+        this.tractor.rotation.y = 0;
+        this.tractorRotation = 0;
+        this.tractorVelocity = { x: 0, z: 0 };
+        this.controls.reset();
+        this.showNotification("Tractor reseteado");
+    }
+    
+    showNotification(text) {
+        const notif = document.getElementById('notification');
+        notif.textContent = text;
+        notif.classList.add('show');
+        setTimeout(() => notif.classList.remove('show'), 2000);
+    }
+    
+    onWindowResize() {
+        const container = document.getElementById('scene3d');
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+        this.camera.aspect = width / height;
+        this.camera.updateProjectionMatrix();
+        this.renderer.setSize(width, height);
+    }
+    
+    animate() {
+        requestAnimationFrame(() => this.animate());
+        
+        const delta = Math.min(this.clock.getDelta(), 0.1);
+        
+        if (!this.orbitsPaused) {
+            this.satellites.forEach(sat => {
+                sat.userData.angle += sat.userData.speed * delta * 0.1;
+                sat.position.x = Math.cos(sat.userData.angle) * sat.userData.radius;
+                sat.position.z = Math.sin(sat.userData.angle) * sat.userData.radius;
+                sat.position.y = sat.userData.height + Math.sin(sat.userData.angle * 2) * 2;
+            });
+        }
+        
+        this.updateTractorMovement(delta);
+        this.updateSignalLines();
+        this.updateStats();
+        this.checkMissionProgress();
+        
+        this.renderer.render(this.scene, this.camera);
+    }
+}
+
+// Iniciar juego
+const game = new RTKGame();
+</script>
+
+</body>
+</html>
