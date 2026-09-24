@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Medidor de Distancia ESP32</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background: #f4f4f9; margin-top: 50px; }
+        .container { background: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 400px; margin: auto; }
+        h1 { color: #333; }
+        input { padding: 10px; width: 70%; font-size: 16px; margin-bottom: 15px; border: 1px solid #ccc; border-radius: 5px; }
+        button { padding: 10px 20px; font-size: 16px; background: #007BFF; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .distancia { font-size: 48px; font-weight: bold; color: #28a745; margin-top: 20px; }
+        .estado { font-size: 14px; color: #666; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📏 Sensor Ultrasónico</h1>
+        <input type="text" id="ipInput" placeholder="Ej: 192.168.43.100">
+        <br>
+        <button onclick="iniciarLectura()">Conectar y Medir</button>
+        
+        <div class="distancia" id="valorDistancia">-- cm</div>
+        <div class="estado" id="estadoConexion">Esperando conexión...</div>
+    </div>
+
+    <script>
+        let intervalo;
+        let ipBase = "";
+
+        function iniciarLectura() {
+            ipBase = document.getElementById('ipInput').value.trim();
+            if (!ipBase) {
+                alert("Por favor, ingresa la IP del ESP32");
+                return;
+            }
+            if (!ipBase.startsWith("http://")) {
+                ipBase = "http://" + ipBase;
+            }
+            
+            document.getElementById('estadoConexion').innerText = "Conectado a " + ipBase;
+            document.getElementById('estadoConexion').style.color = "green";
+
+            // Limpiar intervalo anterior si existe
+            if (intervalo) clearInterval(intervalo);
+            
+            // Leer cada 500ms
+            intervalo = setInterval(obtenerDistancia, 500);
+        }
+
+        async function obtenerDistancia() {
+            try {
+                const response = await fetch(ipBase + "/distancia");
+                if (response.ok) {
+                    const texto = await response.text();
+                    const distancia = parseFloat(texto).toFixed(2);
+                    document.getElementById('valorDistancia').innerText = distancia + " cm";
+                } else {
+                    throw new Error("Error en la respuesta");
+                }
+            } catch (error) {
+                document.getElementById('valorDistancia').innerText = "Error";
+                document.getElementById('estadoConexion').innerText = "Error de conexión. Verifica la IP o el WiFi.";
+                document.getElementById('estadoConexion').style.color = "red";
+                clearInterval(intervalo);
+            }
+        }
+    </script>
+</body>
+</html>
